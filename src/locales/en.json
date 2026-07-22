@@ -251,6 +251,10 @@
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}!",
     "yourSubscription": "Your Subscription",
+    "emailRecovery": {
+      "title": "Add an email for account recovery",
+      "description": "If Telegram becomes unavailable, you'll be able to sign in via the website and restore VPN access"
+    },
     "quickActions": "Quick Actions",
     "viewSubscription": "Manage Subscription",
     "topUpBalance": "Top Up Balance",

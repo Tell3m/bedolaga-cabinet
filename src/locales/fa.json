@@ -236,6 +236,10 @@
     "title": "داشبورد",
     "welcome": "خوش آمدید، {{name}}!",
     "yourSubscription": "اشتراک شما",
+    "emailRecovery": {
+      "title": "برای بازیابی دسترسی، ایمیل اضافه کنید",
+      "description": "اگر تلگرام در دسترس نباشد، می‌توانید از طریق وب‌سایت وارد شوید و دسترسی VPN را بازیابی کنید"
+    },
     "quickActions": "دسترسی سریع",
     "viewSubscription": "مدیریت اشتراک",
     "topUpBalance": "شارژ موجودی",

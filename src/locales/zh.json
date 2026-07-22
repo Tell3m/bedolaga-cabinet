@@ -236,6 +236,10 @@
     "title": "个人中心",
     "welcome": "欢迎，{{name}}！",
     "yourSubscription": "您的订阅",
+    "emailRecovery": {
+      "title": "添加邮箱以便恢复账户访问",
+      "description": "如果 Telegram 无法访问，您可以通过网站登录并恢复 VPN 访问"
+    },
     "quickActions": "快捷操作",
     "viewSubscription": "管理订阅",
     "topUpBalance": "充值余额",

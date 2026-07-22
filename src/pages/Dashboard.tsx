@@ -28,6 +28,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const refreshUser = useAuthStore((state) => state.refreshUser);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const queryClient = useQueryClient();
   const { isCompleted: isOnboardingCompleted, complete: completeOnboarding } = useOnboarding();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -399,6 +400,35 @@ export default function Dashboard() {
         earningsRubles={referralInfo?.available_balance_rubles || 0}
         refLoading={refLoading}
       />
+
+      {/* Email recovery nudge -- users who only ever authenticate via
+          Telegram have no way to reach the site's email-based recovery
+          flow if Telegram becomes blocked. Shown once until an email is
+          added and verified (user.email_verified flips true and this
+          disappears on its own, same as the wheel banner below). Hidden
+          for admins: the recovery site's magic-link/auto-login flow
+          explicitly rejects ADMIN_IDS/ADMIN_EMAILS accounts (see
+          /cabinet/auth/login/auto), so an admin adding an email here would
+          gain nothing -- they must always use Telegram/password login. */}
+      {!user?.email_verified && !isAdmin && (
+        <Link
+          to="/profile/accounts"
+          className="bento-card-hover group flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-3xl">🛟</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold text-dark-100">
+                {t('dashboard.emailRecovery.title')}
+              </h3>
+              <p className="text-sm text-dark-400">{t('dashboard.emailRecovery.description')}</p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 text-dark-500 transition-all duration-300 group-hover:translate-x-1 group-hover:text-accent-400">
+            <ChevronRightIcon />
+          </div>
+        </Link>
+      )}
 
       {/* Fortune Wheel Banner */}
       {wheelConfig?.is_enabled && (

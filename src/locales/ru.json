@@ -258,6 +258,10 @@
     "title": "Личный кабинет",
     "welcome": "Добро пожаловать, {{name}}!",
     "yourSubscription": "Ваша подписка",
+    "emailRecovery": {
+      "title": "Добавьте email для восстановления доступа",
+      "description": "Если Telegram станет недоступен, сможете войти через сайт и восстановить доступ к VPN"
+    },
     "quickActions": "Быстрые действия",
     "viewSubscription": "Управление подпиской",
     "topUpBalance": "Пополнить баланс",
