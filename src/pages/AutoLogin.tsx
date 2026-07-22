@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/auth';
+import { tokenStorage } from '../utils/token';
 import { XIcon, CheckCircleIcon } from '@/components/icons';
 import type { AuthResponse } from '../types';
 
@@ -51,12 +52,20 @@ export default function AutoLogin() {
         // become a logged-in session unless the user explicitly asks to
         // via the fallback button.
         if (pollToken) {
+          // /email/magic-link/confirm requires an authenticated request --
+          // stash the token in storage just long enough for the interceptor
+          // to attach it (this never touches the reactive auth store, so
+          // the app doesn't render as logged-in here), then wipe it again
+          // regardless of outcome so nothing lingers in this bridge tab.
+          tokenStorage.setTokens(response.access_token, response.refresh_token);
           try {
             await authApi.confirmMagicLink(pollToken);
           } catch {
             // Non-fatal -- the token exchange above already proved the
             // link is valid; confirm is just best-effort delivery to the
             // other browser.
+          } finally {
+            tokenStorage.clearTokens();
           }
           setBridgeAuth(response);
           return;
