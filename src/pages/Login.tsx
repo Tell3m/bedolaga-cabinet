@@ -32,6 +32,52 @@ import LegalFooter from '../components/LegalFooter';
 // not rendered. Flip back to true to bring the row back.
 const SHOW_OAUTH_PROVIDERS = false;
 
+// "Waiting for confirmation" was otherwise only React state -- a reload
+// (very common on iOS Safari, which reloads backgrounded tabs on its own)
+// wiped it and dumped the visitor back on the empty form, forcing a brand
+// new magic-link request every time it happened. This persists the
+// poll_token so a reload can resume the same wait instead of restarting it.
+const MAGIC_LINK_STORAGE_KEY = 'cabinet-magic-link-pending';
+// Auto-login tokens are minted with a 1h TTL server-side; stop resuming a
+// little before that so we don't retry a poll_token that's already dead.
+const MAGIC_LINK_RESUME_TTL_MS = 55 * 60 * 1000;
+
+interface StoredMagicLink {
+  email: string;
+  pollToken: string;
+  savedAt: number;
+}
+
+function loadStoredMagicLink(): StoredMagicLink | null {
+  try {
+    const raw = localStorage.getItem(MAGIC_LINK_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredMagicLink;
+    if (!parsed?.pollToken || Date.now() - parsed.savedAt > MAGIC_LINK_RESUME_TTL_MS) {
+      localStorage.removeItem(MAGIC_LINK_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredMagicLink(state: StoredMagicLink) {
+  try {
+    localStorage.setItem(MAGIC_LINK_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Private browsing / storage disabled -- the wait just won't survive
+    // a reload in that case, same as before this fix.
+  }
+}
+
+function clearStoredMagicLink() {
+  try {
+    localStorage.removeItem(MAGIC_LINK_STORAGE_KEY);
+  } catch {}
+}
+
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -256,6 +302,7 @@ export default function Login() {
           await loginWithMagicLinkPoll(pollToken);
           // Success -- auth store is updated; the isAuthenticated effect
           // above handles navigation.
+          clearStoredMagicLink();
         } catch (err: unknown) {
           if (!magicLinkMountedRef.current) return;
           if (isAxiosError(err) && err.response?.status === 202) {
@@ -263,6 +310,7 @@ export default function Login() {
             return;
           }
           if (isAxiosError(err) && err.response?.status === 410) {
+            clearStoredMagicLink();
             setMagicLinkError(
               t('auth.magicLinkExpired', 'This link has expired. Request a new one.'),
             );
@@ -281,6 +329,18 @@ export default function Login() {
     [loginWithMagicLinkPoll, t],
   );
 
+  // Resume a wait that survived a reload (see the persistence helpers
+  // above) instead of showing the empty form again.
+  useEffect(() => {
+    const stored = loadStoredMagicLink();
+    if (stored) {
+      setMagicLinkEmail(stored.email);
+      setMagicLinkSent(true);
+      startMagicLinkPoll(stored.pollToken);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleMagicLink = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setMagicLinkError('');
@@ -292,9 +352,11 @@ export default function Login() {
 
     setMagicLinkLoading(true);
     try {
-      const result = await authApi.requestMagicLink(magicLinkEmail.trim());
+      const email = magicLinkEmail.trim();
+      const result = await authApi.requestMagicLink(email);
       setMagicLinkSent(true);
       if (result.poll_token) {
+        saveStoredMagicLink({ email, pollToken: result.poll_token, savedAt: Date.now() });
         startMagicLinkPoll(result.poll_token);
       }
     } catch (err: unknown) {
@@ -309,6 +371,7 @@ export default function Login() {
       clearTimeout(magicLinkPollTimeoutRef.current);
       magicLinkPollTimeoutRef.current = null;
     }
+    clearStoredMagicLink();
     setMagicLinkEmail('');
     setMagicLinkSent(false);
     setMagicLinkError('');
