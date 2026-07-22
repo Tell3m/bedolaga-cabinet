@@ -67,6 +67,11 @@ export default function Login() {
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [showMagicLink, setShowMagicLink] = useState(false);
+  const [magicLinkEmail, setMagicLinkEmail] = useState('');
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [magicLinkError, setMagicLinkError] = useState('');
   const [showEmailForm, setShowEmailForm] = useState(true);
 
   // Telegram safe area insets
@@ -316,6 +321,33 @@ export default function Login() {
     setForgotPasswordEmail('');
     setForgotPasswordSent(false);
     setForgotPasswordError('');
+  };
+
+  const handleMagicLink = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setMagicLinkError('');
+
+    if (!magicLinkEmail.trim() || !isValidEmail(magicLinkEmail.trim())) {
+      setMagicLinkError(t('auth.invalidEmail', 'Please enter a valid email address'));
+      return;
+    }
+
+    setMagicLinkLoading(true);
+    try {
+      await authApi.requestMagicLink(magicLinkEmail.trim());
+      setMagicLinkSent(true);
+    } catch (err: unknown) {
+      setMagicLinkError(getApiErrorMessage(err, t('common.error')));
+    } finally {
+      setMagicLinkLoading(false);
+    }
+  };
+
+  const closeMagicLinkModal = () => {
+    setShowMagicLink(false);
+    setMagicLinkEmail('');
+    setMagicLinkSent(false);
+    setMagicLinkError('');
   };
 
   return (
@@ -581,6 +613,81 @@ export default function Login() {
                             </div>
                           </div>
                         )
+                      ) : showMagicLink ? (
+                        magicLinkSent ? (
+                          <div className="space-y-4 text-center">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-success-500/20">
+                              <EmailIcon className="h-6 w-6 text-success-400" />
+                            </div>
+                            <p className="text-sm font-medium text-dark-100">
+                              {t('auth.checkEmail', 'Check your email')}
+                            </p>
+                            <p className="text-xs text-dark-400">
+                              {t(
+                                'auth.magicLinkSent',
+                                'If this email is valid, we sent a login link. Open it to sign in.',
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={closeMagicLinkModal}
+                              className="text-sm text-accent-400 transition-colors hover:text-accent-300"
+                            >
+                              {t('common.back', 'Back')}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <p className="text-center text-sm text-dark-400">
+                              {t(
+                                'auth.magicLinkHint',
+                                'Enter your email and we will send you a link to sign in -- no password needed.',
+                              )}
+                            </p>
+                            <form onSubmit={handleMagicLink} className="space-y-3">
+                              <div>
+                                <label htmlFor="magicLinkEmail" className="label">
+                                  Email
+                                </label>
+                                <input
+                                  id="magicLinkEmail"
+                                  type="email"
+                                  value={magicLinkEmail}
+                                  onChange={(e) => setMagicLinkEmail(e.target.value)}
+                                  placeholder="you@example.com"
+                                  className="input"
+                                  autoFocus
+                                />
+                              </div>
+                              {magicLinkError && (
+                                <p className="text-sm text-error-400">{magicLinkError}</p>
+                              )}
+                              <button
+                                type="submit"
+                                disabled={magicLinkLoading}
+                                className="btn-primary w-full py-2.5"
+                              >
+                                {magicLinkLoading ? (
+                                  <span className="flex items-center justify-center gap-2">
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                    {t('common.loading')}
+                                  </span>
+                                ) : (
+                                  t('auth.sendMagicLink', 'Send login link')
+                                )}
+                              </button>
+                            </form>
+                            <div className="text-center">
+                              <button
+                                type="button"
+                                onClick={closeMagicLinkModal}
+                                className="text-sm text-dark-400 transition-colors hover:text-dark-200"
+                              >
+                                {t('common.back', 'Back')}
+                              </button>
+                            </div>
+                          </div>
+                        )
                       ) : (
                         /* Normal login / register */
                         <>
@@ -724,7 +831,7 @@ export default function Login() {
                           )}
 
                           {authMode === 'login' && (
-                            <div className="text-center">
+                            <div className="space-y-2 text-center">
                               <button
                                 type="button"
                                 onClick={() => setShowForgotPassword(true)}
@@ -732,6 +839,15 @@ export default function Login() {
                               >
                                 {t('auth.forgotPassword', 'Forgot password?')}
                               </button>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowMagicLink(true)}
+                                  className="text-sm text-dark-400 transition-colors hover:text-dark-200"
+                                >
+                                  {t('auth.loginWithMagicLink', 'Log in with a link (no password)')}
+                                </button>
+                              </div>
                             </div>
                           )}
                         </>

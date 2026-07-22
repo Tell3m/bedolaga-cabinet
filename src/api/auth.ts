@@ -154,6 +154,14 @@ export const authApi = {
     return response.data;
   },
 
+  // Passwordless login: emails a one-time link to /auto-login?token=...,
+  // which the existing AutoLogin page consumes via autoLogin() above.
+  // Creates the account (no password) if the email doesn't exist yet.
+  requestMagicLink: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post('/cabinet/auth/email/magic-link', { email });
+    return response.data;
+  },
+
   resetPassword: async (token: string, password: string): Promise<{ message: string }> => {
     const response = await apiClient.post('/cabinet/auth/password/reset', {
       token,
