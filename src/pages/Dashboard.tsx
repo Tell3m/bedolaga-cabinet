@@ -403,14 +403,19 @@ export default function Dashboard() {
 
       {/* Email recovery nudge -- users who only ever authenticate via
           Telegram have no way to reach the site's email-based recovery
-          flow if Telegram becomes blocked. Shown once until an email is
-          added and verified (user.email_verified flips true and this
-          disappears on its own, same as the wheel banner below). Hidden
-          for admins: the recovery site's magic-link/auto-login flow
-          explicitly rejects ADMIN_IDS/ADMIN_EMAILS accounts (see
-          /cabinet/auth/login/auto), so an admin adding an email here would
-          gain nothing -- they must always use Telegram/password login. */}
-      {!user?.email_verified && !isAdmin && (
+          flow if Telegram becomes blocked. Gated on email presence, not
+          email_verified: the recovery magic-link endpoint (POST
+          /cabinet/auth/email/magic-link) looks a user up by email and
+          checks only status == active, never email_verified -- an email
+          attached via the account-merge confirmation-code flow works for
+          recovery immediately even though it's left unverified. Checking
+          email_verified here would keep nagging someone who's already
+          covered. Hidden for admins: the recovery site's magic-link/
+          auto-login flow explicitly rejects ADMIN_IDS/ADMIN_EMAILS
+          accounts (see /cabinet/auth/login/auto), so an admin adding an
+          email here would gain nothing -- they must always use Telegram/
+          password login. */}
+      {!user?.email && !isAdmin && (
         <Link
           to="/profile/accounts"
           className="bento-card-hover group flex items-center justify-between"
