@@ -409,7 +409,7 @@ export default function Login() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleMagicLink} className="space-y-3">
+                <form onSubmit={handleMagicLink} className="space-y-3" noValidate>
                   <div>
                     <label htmlFor="magicLinkEmail" className="label">
                       Email
