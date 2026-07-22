@@ -14,6 +14,7 @@ export default function AutoLogin() {
   const attemptedRef = useRef(false);
 
   const token = searchParams.get('token');
+  const pollToken = searchParams.get('poll_token');
 
   useEffect(() => {
     // Prevent referrer leaking the token
@@ -39,12 +40,23 @@ export default function AutoLogin() {
         setTokens(response.access_token, response.refresh_token);
         setUser(response.user);
         await checkAdminStatus();
+        // If this link was requested from a magic-link login (poll_token
+        // present), tell the ORIGINAL requesting browser it can log
+        // itself in now -- best-effort: this browser is already logged
+        // in regardless of whether the confirm call succeeds.
+        if (pollToken) {
+          try {
+            await authApi.confirmMagicLink(pollToken);
+          } catch {
+            // Non-fatal -- this browser is authenticated either way.
+          }
+        }
         navigate('/', { replace: true });
       })
       .catch(() => {
         setError(true);
       });
-  }, [token, navigate, setTokens, setUser, checkAdminStatus]);
+  }, [token, pollToken, navigate, setTokens, setUser, checkAdminStatus]);
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-dark-950 px-4">

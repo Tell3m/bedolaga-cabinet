@@ -157,8 +157,33 @@ export const authApi = {
   // Passwordless login: emails a one-time link to /auto-login?token=...,
   // which the existing AutoLogin page consumes via autoLogin() above.
   // Creates the account (no password) if the email doesn't exist yet.
-  requestMagicLink: async (email: string): Promise<{ message: string }> => {
+  // poll_token lets THIS browser log itself in once the link is opened
+  // anywhere (see pollMagicLink/confirmMagicLink below) -- important
+  // since the click often happens in a different browser/app than the
+  // one that requested the link (Mail app's in-app browser vs. an iOS
+  // home-screen icon, say).
+  requestMagicLink: async (email: string): Promise<{ message: string; poll_token?: string }> => {
     const response = await apiClient.post('/cabinet/auth/email/magic-link', { email });
+    return response.data;
+  },
+
+  // Mirrors pollDeepLinkToken exactly -- see the comment there for why
+  // validateStatus is restricted to 200.
+  pollMagicLink: async (pollToken: string): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>(
+      '/cabinet/auth/email/magic-link/poll',
+      { poll_token: pollToken },
+      { validateStatus: (status) => status === 200 },
+    );
+    return response.data;
+  },
+
+  // Called by the browser that actually opened the emailed link (after its
+  // own autoLogin() succeeds) to unblock the requesting browser's poll.
+  confirmMagicLink: async (pollToken: string): Promise<{ confirmed: boolean }> => {
+    const response = await apiClient.post('/cabinet/auth/email/magic-link/confirm', {
+      poll_token: pollToken,
+    });
     return response.data;
   },
 

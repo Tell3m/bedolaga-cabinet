@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { useAuthStore } from '../store/auth';
 import { useShallow } from 'zustand/shallow';
 import { authApi } from '../api/auth';
@@ -39,11 +40,13 @@ export default function Login() {
     isAuthenticated,
     isLoading: isAuthInitializing,
     loginWithTelegram,
+    loginWithMagicLinkPoll,
   } = useAuthStore(
     useShallow((state) => ({
       isAuthenticated: state.isAuthenticated,
       isLoading: state.isLoading,
       loginWithTelegram: state.loginWithTelegram,
+      loginWithMagicLinkPoll: state.loginWithMagicLinkPoll,
     })),
   );
 
@@ -220,6 +223,64 @@ export default function Login() {
     }
   };
 
+  const MAGIC_LINK_POLL_INTERVAL_MS = 2500;
+  const magicLinkPollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const magicLinkPollInFlightRef = useRef(false);
+  const magicLinkMountedRef = useRef(true);
+
+  useEffect(() => {
+    magicLinkMountedRef.current = true;
+    return () => {
+      magicLinkMountedRef.current = false;
+      if (magicLinkPollTimeoutRef.current) clearTimeout(magicLinkPollTimeoutRef.current);
+    };
+  }, []);
+
+  // Polls from the SAME browser that requested the link -- so that once
+  // the link is opened anywhere (even a different browser/device: Mail
+  // app's in-app browser vs. an iOS home-screen icon, say), this tab logs
+  // itself in automatically instead of leaving the user stuck on whatever
+  // opened the click.
+  const startMagicLinkPoll = useCallback(
+    (pollToken: string) => {
+      if (magicLinkPollTimeoutRef.current) {
+        clearTimeout(magicLinkPollTimeoutRef.current);
+        magicLinkPollTimeoutRef.current = null;
+      }
+      magicLinkPollInFlightRef.current = false;
+
+      const poll = async () => {
+        if (!magicLinkMountedRef.current || magicLinkPollInFlightRef.current) return;
+        magicLinkPollInFlightRef.current = true;
+        try {
+          await loginWithMagicLinkPoll(pollToken);
+          // Success -- auth store is updated; the isAuthenticated effect
+          // above handles navigation.
+        } catch (err: unknown) {
+          if (!magicLinkMountedRef.current) return;
+          if (isAxiosError(err) && err.response?.status === 202) {
+            magicLinkPollTimeoutRef.current = setTimeout(poll, MAGIC_LINK_POLL_INTERVAL_MS);
+            return;
+          }
+          if (isAxiosError(err) && err.response?.status === 410) {
+            setMagicLinkError(
+              t('auth.magicLinkExpired', 'This link has expired. Request a new one.'),
+            );
+            return;
+          }
+          // Transient/network error -- keep trying, the link itself is
+          // still valid server-side even if this particular poll failed.
+          magicLinkPollTimeoutRef.current = setTimeout(poll, MAGIC_LINK_POLL_INTERVAL_MS);
+        } finally {
+          magicLinkPollInFlightRef.current = false;
+        }
+      };
+
+      magicLinkPollTimeoutRef.current = setTimeout(poll, MAGIC_LINK_POLL_INTERVAL_MS);
+    },
+    [loginWithMagicLinkPoll, t],
+  );
+
   const handleMagicLink = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setMagicLinkError('');
@@ -231,8 +292,11 @@ export default function Login() {
 
     setMagicLinkLoading(true);
     try {
-      await authApi.requestMagicLink(magicLinkEmail.trim());
+      const result = await authApi.requestMagicLink(magicLinkEmail.trim());
       setMagicLinkSent(true);
+      if (result.poll_token) {
+        startMagicLinkPoll(result.poll_token);
+      }
     } catch (err: unknown) {
       setMagicLinkError(getApiErrorMessage(err, t('common.error')));
     } finally {
@@ -241,6 +305,10 @@ export default function Login() {
   };
 
   const resetMagicLink = () => {
+    if (magicLinkPollTimeoutRef.current) {
+      clearTimeout(magicLinkPollTimeoutRef.current);
+      magicLinkPollTimeoutRef.current = null;
+    }
     setMagicLinkEmail('');
     setMagicLinkSent(false);
     setMagicLinkError('');
@@ -400,6 +468,13 @@ export default function Login() {
                       'If this email is valid, we sent a login link. Open it to sign in.',
                     )}
                   </p>
+                  {!magicLinkError && (
+                    <p className="flex items-center justify-center gap-2 text-xs text-dark-500">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-dark-600 border-t-accent-500" />
+                      {t('auth.magicLinkWaiting', 'Waiting for you to open the link…')}
+                    </p>
+                  )}
+                  {magicLinkError && <p className="text-sm text-error-400">{magicLinkError}</p>}
                   <button
                     type="button"
                     onClick={resetMagicLink}

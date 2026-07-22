@@ -59,6 +59,7 @@ interface AuthState {
     deviceId?: string | null,
   ) => Promise<void>;
   loginWithDeepLink: (token: string, campaignSlug?: string | null) => Promise<void>;
+  loginWithMagicLinkPoll: (pollToken: string) => Promise<void>;
   registerWithEmail: (
     email: string,
     password: string,
@@ -356,6 +357,21 @@ export const useAuthStore = create<AuthState>()(
 
       loginWithDeepLink: async (token, campaignSlug) => {
         const response = await authApi.pollDeepLinkToken(token, campaignSlug);
+        if (!response.access_token || !response.refresh_token) {
+          throw new Error('Invalid auth response: missing tokens');
+        }
+        tokenStorage.setTokens(response.access_token, response.refresh_token);
+        set({
+          accessToken: response.access_token,
+          refreshToken: response.refresh_token,
+          user: response.user,
+          isAuthenticated: true,
+          pendingCampaignBonus: response.campaign_bonus || null,
+        });
+      },
+
+      loginWithMagicLinkPoll: async (pollToken: string) => {
+        const response = await authApi.pollMagicLink(pollToken);
         if (!response.access_token || !response.refresh_token) {
           throw new Error('Invalid auth response: missing tokens');
         }
