@@ -19,6 +19,12 @@ export default function AutoLogin() {
 
   const token = searchParams.get('token');
   const pollToken = searchParams.get('poll_token');
+  // Only ever a same-origin relative path -- an open redirect via this
+  // param would let a crafted auto-login link send an authenticated
+  // session anywhere. "/" (the pre-existing default) trivially satisfies
+  // the same check.
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && /^\/(?!\/)/.test(rawNext) ? rawNext : '/';
 
   useEffect(() => {
     // Prevent referrer leaking the token
@@ -74,12 +80,12 @@ export default function AutoLogin() {
         setTokens(response.access_token, response.refresh_token);
         setUser(response.user);
         await checkAdminStatus();
-        navigate('/', { replace: true });
+        navigate(nextPath, { replace: true });
       })
       .catch(() => {
         setError(true);
       });
-  }, [token, pollToken, navigate, setTokens, setUser, checkAdminStatus]);
+  }, [token, pollToken, nextPath, navigate, setTokens, setUser, checkAdminStatus]);
 
   const openHere = useCallback(async () => {
     if (!bridgeAuth || opening) return;
