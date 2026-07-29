@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { fireAnalyticsEvent, getYandexCid } from '../hooks/useAnalyticsCounters';
@@ -763,6 +763,7 @@ function DiscountBanner({
 
 export default function QuickPurchase() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -869,6 +870,11 @@ export default function QuickPurchase() {
   const [selectedPeriodDays, setSelectedPeriodDays] = useState<number | null>(null);
   const contactKey = `lp_contact_${slug ?? ''}`;
   const [contactValue, setContactValue] = useState(() => {
+    // ?email= wins over the remembered localStorage value -- it's an
+    // explicit handoff from an already-verified visitor on the main site
+    // (see attachBuyHandoff in animations.ts), not a guess.
+    const emailParam = searchParams.get('email');
+    if (emailParam && isValidContact(emailParam)) return emailParam;
     try {
       return localStorage.getItem(contactKey) || '';
     } catch {
