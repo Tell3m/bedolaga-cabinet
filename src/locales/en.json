@@ -221,6 +221,10 @@
     "loginSuccess": "Login successful",
     "passwordResetSent": "Password reset link sent to your email",
     "sendResetLink": "Send reset link",
+    "loginWithMagicLink": "Sign in with a link (no password)",
+    "magicLinkHint": "Enter your email — we'll send a sign-in link, no password needed.",
+    "magicLinkSent": "If that email exists, we've sent a sign-in link. Follow it to log in.",
+    "sendMagicLink": "Send sign-in link",
     "continueWithGoogle": "Continue with Google",
     "continueWithYandex": "Continue with Yandex",
     "continueWithDiscord": "Continue with Discord",
@@ -253,7 +257,11 @@
     "yourSubscription": "Your Subscription",
     "emailRecovery": {
       "title": "Add an email for account recovery",
-      "description": "If Telegram becomes unavailable, you'll be able to sign in via the website and restore VPN access"
+      "description": "If Telegram becomes unavailable, you'll be able to sign in via the website and restore VPN access. Already using the website separately? Link your email here to merge the accounts."
+    },
+    "telegramLink": {
+      "title": "Link Telegram",
+      "description": "Also using our Telegram bot? Link it here — otherwise it'll be a separate account without your subscription."
     },
     "quickActions": "Quick Actions",
     "viewSubscription": "Manage Subscription",

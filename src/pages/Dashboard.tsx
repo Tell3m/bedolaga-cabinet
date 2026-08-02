@@ -435,6 +435,35 @@ export default function Dashboard() {
         </Link>
       )}
 
+      {/* Telegram link nudge -- the reciprocal of the email-recovery card
+          above. A site/email account with no Telegram linked is exactly how
+          the Gajurus1 duplicate-account incident (02.08.2026) happened: the
+          same person later pressed /start in the bot with nothing to tell
+          them that created a second, separate account instead of using the
+          one they already had. Gated on email presence (not telegram_id
+          alone) so it never shows for a user still mid-signup with neither
+          identifier yet -- that's the site-trial gate's job, not this
+          card's. */}
+      {!user?.telegram_id && !!user?.email && !isAdmin && (
+        <Link
+          to="/profile/accounts"
+          className="bento-card-hover group flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-3xl">🔗</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold text-dark-100">
+                {t('dashboard.telegramLink.title')}
+              </h3>
+              <p className="text-sm text-dark-400">{t('dashboard.telegramLink.description')}</p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 text-dark-500 transition-all duration-300 group-hover:translate-x-1 group-hover:text-accent-400">
+            <ChevronRightIcon />
+          </div>
+        </Link>
+      )}
+
       {/* Fortune Wheel Banner */}
       {wheelConfig?.is_enabled && (
         <Link to="/wheel" className="bento-card-hover group flex items-center justify-between">
